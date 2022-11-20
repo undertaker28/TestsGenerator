@@ -4,8 +4,11 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 VisualStudioVersion = 17.3.32929.385
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "TestsGenerator", "TestsGenerator\TestsGenerator.csproj", "{1E6CC030-82AD-46D6-9269-F79211487236}"
+	ProjectSection(ProjectDependencies) = postProject
+		{E1D51938-00B6-4C4B-8651-F316F54BF78C} = {E1D51938-00B6-4C4B-8651-F316F54BF78C}
+	EndProjectSection
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TestsGeneratorLibrary", "TestsGeneratorLibrary\TestsGeneratorLibrary.csproj", "{E1D51938-00B6-4C4B-8651-F316F54BF78C}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "TestsGeneratorLibrary", "TestsGeneratorLibrary\TestsGeneratorLibrary.csproj", "{E1D51938-00B6-4C4B-8651-F316F54BF78C}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

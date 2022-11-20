@@ -8,7 +8,7 @@ using static Microsoft.CodeAnalysis.CSharp.SyntaxFactory;
 
 namespace TestsGeneratorLibrary
 {
-    public class TestsGenerator
+    public class TestsGeneratorScript
     {
         public List<TestFile> CreateTests(string sourceCode)
         {
