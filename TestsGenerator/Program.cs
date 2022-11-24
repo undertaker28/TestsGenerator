@@ -18,7 +18,7 @@ namespace TestsGenerator
 
             TransformManyBlock<string, TestFile> createTests = new TransformManyBlock<string, TestFile>
             (
-                async sourceCode => await Task.Run(() => generator.CreateTests(sourceCode).ToArray()),
+                sourceCode => generator.CreateTests(sourceCode).ToArray(),
                 blockOptions
             );
 

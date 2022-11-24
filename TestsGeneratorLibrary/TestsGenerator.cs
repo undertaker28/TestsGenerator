@@ -9,60 +9,74 @@ namespace TestsGeneratorLibrary
     {
         public List<TestFile> CreateTests(string sourceCode)
         {
-            List<TestFile> list = new List<TestFile>();
+            List<TestFile> list = new();
             SyntaxNode root = CSharpSyntaxTree.ParseText(sourceCode).GetRoot();
             var usings = root.DescendantNodes().OfType<UsingDirectiveSyntax>();
-            foreach (ClassDeclarationSyntax cds in root.DescendantNodes().OfType<ClassDeclarationSyntax>())
+            var namespaces = root.DescendantNodes().OfType<NamespaceDeclarationSyntax>();
+            var classes = root.DescendantNodes().OfType<ClassDeclarationSyntax>().Where(@class => @class.Modifiers.Any(SyntaxKind.PublicKeyword)).ToList();
+            var members = classes.Select(CreateTestClass).ToArray();
+            for (int i = 0; i < classes.Count; i++)
             {
-                ClassDeclarationSyntax testClass = CreateTestClass(cds.Identifier.ValueText);
-                var methods = cds.DescendantNodes().OfType<MethodDeclarationSyntax>().Where(node => node.Modifiers.Any(n => n.IsKind(SyntaxKind.PublicKeyword))).ToList();
-                methods.Sort((method1, method2) => string.Compare(method1.Identifier.Text, method2.Identifier.Text, StringComparison.Ordinal));
-                var methodIndex = 0;
-                for (var i = 0; i < methods.Count; ++i)
-                {
-                    if (i != 0 && methods[i].Identifier.Text == methods[i - 1].Identifier.Text)
-                    {
-                        methodIndex++;
-                    }
-                    else if (i != methods.Count - 1 && methods[i].Identifier.Text == methods[i + 1].Identifier.Text)
-                    {
-                        methodIndex = 1;
-                    }
-                    else
-                    {
-                        methodIndex = -1;
-                    }
-                    var methodName = methods[i].Identifier.Text + (methodIndex != -1 ? $"{methodIndex}" : "");
-                    testClass = testClass.AddMembers(CreateTestMethod(methodName));
-
-                }
                 CompilationUnitSyntax unit = CompilationUnit()
-                    .WithUsings(new SyntaxList<UsingDirectiveSyntax>(usings)
-                        .Add(UsingDirective(QualifiedName(IdentifierName("NUnit"), IdentifierName("Framework")))))
-                    .AddMembers(NamespaceDeclaration(ParseName("tests")).AddMembers(testClass));
-                list.Add(new TestFile($"{cds.Identifier.ValueText}Tests.cs", unit.NormalizeWhitespace().ToFullString()));
+                    .WithUsings(new SyntaxList<UsingDirectiveSyntax>(usings).
+                        Add(UsingDirective(QualifiedName(IdentifierName("NUnit"), IdentifierName("Framework")))).
+                        AddRange(namespaces.Select(GetUsingFromNamespace))).
+                        AddMembers(members[i]);
+                list.Add(new TestFile($"{classes[i].Identifier.Text}Tests.cs", unit.NormalizeWhitespace().ToFullString()));
             }
             return list;
         }
 
-        private ClassDeclarationSyntax CreateTestClass(string className)
+        private UsingDirectiveSyntax GetUsingFromNamespace(NamespaceDeclarationSyntax namespaceDeclaration)
         {
-            AttributeSyntax attr = Attribute(ParseName("TestFixture"));
-            ClassDeclarationSyntax testClass = ClassDeclaration(className + "Test").
-                                               AddModifiers(Token(SyntaxKind.PublicKeyword)).
-                                               AddAttributeLists(AttributeList().AddAttributes(attr));
-            return testClass;
+            return UsingDirective(namespaceDeclaration.Name);
         }
 
-        private MethodDeclarationSyntax CreateTestMethod(string methodName)
+        private MemberDeclarationSyntax CreateTestClass(ClassDeclarationSyntax classDeclaration)
+        {
+            AttributeSyntax attr = Attribute(ParseName("TestFixture"));
+            var @namespace = NamespaceDeclaration(IdentifierName("Tests"));
+            if (classDeclaration.Parent is NamespaceDeclarationSyntax ns)
+            {
+                @namespace = NamespaceDeclaration(QualifiedName(ns.Name, IdentifierName("Tests")));
+            }
+            var methods = CreateTestMethods(classDeclaration);
+            ClassDeclarationSyntax testClass = ClassDeclaration(classDeclaration.Identifier.Text + "Test").
+                                               AddModifiers(Token(SyntaxKind.PublicKeyword)).
+                                               AddAttributeLists(AttributeList().AddAttributes(attr)).
+                                               AddMembers(methods);
+            return @namespace.AddMembers(testClass);
+        }
+
+        private MemberDeclarationSyntax[] CreateTestMethods(SyntaxNode syntaxNode)
         {
             AttributeSyntax attr = Attribute(ParseName("Test"));
-            MethodDeclarationSyntax testMethod = MethodDeclaration(ParseTypeName("void"), methodName + "Test").
-                                                 AddModifiers(Token(SyntaxKind.PublicKeyword)).
-                                                 AddBodyStatements(ParseStatement("Assert.Fail(\"autogenerated\");")).
-                                                 AddAttributeLists(AttributeList().AddAttributes(attr));
-            return testMethod;
+            var resultMethods = new List<MemberDeclarationSyntax>();
+            var methods = syntaxNode.DescendantNodes().OfType<MethodDeclarationSyntax>().Where(node => node.Modifiers.Any(n => n.IsKind(SyntaxKind.PublicKeyword))).ToList();
+            methods.Sort((method1, method2) => string.Compare(method1.Identifier.Text, method2.Identifier.Text, StringComparison.Ordinal));
+            var methodIndex = 0;
+            for (var i = 0; i < methods.Count; ++i)
+            {
+                if (i != 0 && methods[i].Identifier.Text == methods[i - 1].Identifier.Text)
+                {
+                    methodIndex++;
+                }
+                else if (i != methods.Count - 1 && methods[i].Identifier.Text == methods[i + 1].Identifier.Text)
+                {
+                    methodIndex = 1;
+                }
+                else
+                {
+                    methodIndex = -1;
+                }
+                var methodName = methods[i].Identifier.Text + (methodIndex != -1 ? $"{methodIndex}" : "");
+                MethodDeclarationSyntax testMethod = MethodDeclaration(ParseTypeName("void"), methodName + "Test").
+                                                     AddModifiers(Token(SyntaxKind.PublicKeyword)).
+                                                     AddBodyStatements(ParseStatement("Assert.Fail(\"autogenerated\");")).
+                                                     AddAttributeLists(AttributeList().AddAttributes(attr));
+                resultMethods.Add(testMethod);
+            }
+            return resultMethods.ToArray();
         }
     }
 }
-
