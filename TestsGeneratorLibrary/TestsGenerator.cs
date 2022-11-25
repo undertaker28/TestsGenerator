@@ -35,17 +35,17 @@ namespace TestsGeneratorLibrary
         private MemberDeclarationSyntax CreateTestClass(ClassDeclarationSyntax classDeclaration)
         {
             AttributeSyntax attr = Attribute(ParseName("TestFixture"));
-            var @namespace = NamespaceDeclaration(IdentifierName("Tests"));
+            var classNamespace = NamespaceDeclaration(IdentifierName("Tests"));
             if (classDeclaration.Parent is NamespaceDeclarationSyntax ns)
             {
-                @namespace = NamespaceDeclaration(QualifiedName(ns.Name, IdentifierName("Tests")));
+                classNamespace = NamespaceDeclaration(QualifiedName(ns.Name, IdentifierName("Tests")));
             }
             var methods = CreateTestMethods(classDeclaration);
             ClassDeclarationSyntax testClass = ClassDeclaration(classDeclaration.Identifier.Text + "Test").
                                                AddModifiers(Token(SyntaxKind.PublicKeyword)).
                                                AddAttributeLists(AttributeList().AddAttributes(attr)).
                                                AddMembers(methods);
-            return @namespace.AddMembers(testClass);
+            return classNamespace.AddMembers(testClass);
         }
 
         private MemberDeclarationSyntax[] CreateTestMethods(SyntaxNode syntaxNode)
